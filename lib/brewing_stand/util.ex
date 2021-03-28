@@ -51,6 +51,7 @@ defmodule BrewingStand.Util do
     bits = int |> abs |> Integer.digits(2) |> :string.pad(15, :leading, 0) |> List.flatten()
     sign = if int < 0, do: 1, else: 0
     bits = [sign | bits]
+    # Divide into bytes
     {first, second} = Enum.split(bits, 8)
 
     [Integer.undigits(first, 2), Integer.undigits(second, 2)]
