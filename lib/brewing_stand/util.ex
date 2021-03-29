@@ -33,6 +33,18 @@ defmodule BrewingStand.Util do
     end
   end
 
+  def next_byte_array(data) when is_list(data) do
+    if length(data) >= 1024 do
+      {bytes, rest} = Enum.split(data, 1024)
+      # Remove any padding the chunk may have
+      bytes = :string.trim(bytes, :trailing, [0])
+
+      {:ok, bytes, rest}
+    else
+      {:error, :too_short}
+    end
+  end
+
   # TODO: probably need to split up larger chars into individual bytes, dunno
   @spec pad_string(charlist()) :: charlist()
   @doc """
@@ -47,24 +59,13 @@ defmodule BrewingStand.Util do
 
   @spec to_short(short()) :: list(byte())
   def to_short(int) when is_integer(int) and int > -32768 and int <= 32767 do
-    # Split the int up into bit digits, and pad up to 15, so that we can prepend the sign
-    bits = int |> abs() |> to_bits() |> :string.pad(15, :leading, 0) |> List.flatten()
-    sign = if int < 0, do: 1, else: 0
-    bits = [sign | bits]
-    # Divide into bytes
-    {first, second} = Enum.split(bits, 8)
-
-    [from_bits(first), from_bits(second)]
+    <<b1, b2>> = <<int::size(16)-signed>>
+    [b1, b2]
   end
 
+  @spec from_short(list(byte())) :: short()
   def from_short([first, second]) do
-    bits = to_bits(first) ++ to_bits(second)
-    [sign | bits] = bits |> :string.pad(16, :leading, 0) |> List.flatten()
-    bits = if sign == 1, do: Enum.map(bits, fn x -> x * -1 end), else: bits
-
-    from_bits(bits)
+    <<short::size(16)-signed>> = <<first, second>>
+    short
   end
-
-  defp to_bits(int), do: Integer.digits(int, 2)
-  defp from_bits(bits), do: Integer.undigits(bits, 2)
 end
