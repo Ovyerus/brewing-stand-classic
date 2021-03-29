@@ -41,17 +41,34 @@ defmodule BrewingStand do
       IO.inspect(key)
 
       Packets.server_identify(socket, username)
-      # Packets.level_init(socket)
-      # send_level(socket)
+      send_level(socket)
+      Packets.spawn_player(socket, username)
     else
-      [version | _] -> Logger.warn("Unknown protocol version for IDENTIFY: #{version}")
-      e -> Logger.error(e)
+      [version | _] -> gtfo(socket, "Unknown protocol version #{version}. Expected #{@protocol}.")
+      _ -> gtfo(socket, "Bad packet.")
     end
   end
 
   def parse_packet(_socket, packet), do: IO.inspect(packet)
 
-  # def send_level(socket) do
+  def send_level(socket) do
+    # not working, need to figure out level format
+    Packets.level_init(socket)
+    Packets.level_chunk(socket, 0)
+    Process.sleep(1000)
+    Packets.level_chunk(socket, 25)
+    Process.sleep(1000)
+    Packets.level_chunk(socket, 50)
+    Process.sleep(1000)
+    Packets.level_chunk(socket, 75)
+    Process.sleep(1000)
+    Packets.level_chunk(socket, 100)
+    Packets.level_finalize(socket, 16, 16, 16)
+  end
 
-  # end
+  defp gtfo(socket, reason) do
+    if reason != nil, do: :gen_tcp.send(socket, reason)
+    :gen_tcp.close(socket)
+    exit(:shutdown)
+  end
 end
