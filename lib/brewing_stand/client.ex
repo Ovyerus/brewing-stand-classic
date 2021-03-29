@@ -5,12 +5,12 @@ defmodule BrewingStand.Client do
   import BrewingStand.Util
 
   def start do
-    {:ok, pid} = Level.start_link(nil)
+    Level.init()
 
     case :gen_tcp.connect({127, 0, 0, 1}, 25565, [:list, :inet, packet: :raw, active: false]) do
       {:ok, socket} ->
         Logger.info("Connected to 127.0.0.1:25565")
-        loop(socket, pid)
+        loop(socket)
 
       {:error, :econnrefused} ->
         Logger.error("Unable to connect to server ECONNREFUSED")
@@ -22,7 +22,7 @@ defmodule BrewingStand.Client do
     end
   end
 
-  def loop(socket, world_pid) do
+  def loop(socket) do
     # Identify to kick things off
     username = pad_string('Testy')
     key = pad_string('(none)')
@@ -31,6 +31,6 @@ defmodule BrewingStand.Client do
     Logger.debug("Sent identify")
     :gen_tcp.send(socket, packet)
 
-    PacketReader.read(socket, world_pid)
+    PacketReader.read(socket)
   end
 end

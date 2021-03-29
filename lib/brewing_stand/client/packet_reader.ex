@@ -37,26 +37,26 @@ defmodule BrewingStand.Client.PacketReader do
     0x0F => 1
   }
 
-  def read(socket, world_pid) do
+  def read(socket) do
     with {:ok, [op]} <- read_socket(socket, 1),
          {len, _} when len not in [0, nil] <- {@op_codes[op], op},
          {:ok, packet} <- read_socket(socket, len) do
-      handle_packet(op, packet, world_pid)
-      read(socket, world_pid)
+      handle_packet(op, packet)
+      read(socket)
     else
       {0, op} ->
-        handle_packet(op, [], world_pid)
-        read(socket, world_pid)
+        handle_packet(op, [])
+        read(socket)
 
       {nil, op} ->
         Logger.warn("Unknown opcode #{op}")
-        read(socket, world_pid)
+        read(socket)
 
       {:stopped} ->
         nil
 
       {:error} ->
-        read(socket, world_pid)
+        read(socket)
     end
   end
 
@@ -75,7 +75,7 @@ defmodule BrewingStand.Client.PacketReader do
     end
   end
 
-  def handle_packet(0x00, [protocol | data], _world_pid) do
+  def handle_packet(0x00, [protocol | data]) do
     case protocol do
       0x07 ->
         {:ok, name, data} = next_string(data)
@@ -90,31 +90,33 @@ defmodule BrewingStand.Client.PacketReader do
     end
   end
 
-  def handle_packet(0x01, [], _world_pid), do: :ping
-  def handle_packet(0x02, [], _world_pid), do: Logger.debug("Incoming level data")
+  def handle_packet(0x01, []), do: :ping
+  def handle_packet(0x02, []), do: Logger.debug("Incoming level data")
 
-  def handle_packet(0x03, data, world_pid) do
+  def handle_packet(0x03, data) do
     {:ok, chunk_len, data} = next_short(data)
     {:ok, chunk_data, data} = next_byte_array(data)
     [percentage] = data
 
-    Level.add_gzip_chunk(world_pid, chunk_data)
+    IO.inspect(Enum.at(chunk_data, 0))
+    Level.add(chunk_data)
 
     Logger.debug("Received level chunk, size: #{chunk_len}, percentage: #{percentage}%")
   end
 
-  def handle_packet(0x04, data, world_pid) do
+  def handle_packet(0x04, data) do
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
     {:ok, z, _} = next_short(data)
 
     Logger.debug("Level finalized, with world dimensions of #{x},#{y},#{z}")
-    world = Level.get_world(world_pid)
+    world = Level.get_world()
+    File.write!("./world.lvl", world)
 
     IO.inspect(world)
   end
 
-  def handle_packet(0x07, [player_id | data], _world_pid) do
+  def handle_packet(0x07, [player_id | data]) do
     {:ok, username, data} = next_string(data)
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
@@ -127,7 +129,7 @@ defmodule BrewingStand.Client.PacketReader do
     """)
   end
 
-  def handle_packet(0x08, [_player_id | data], _world_pid) do
+  def handle_packet(0x08, [_player_id | data]) do
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
     {:ok, z, [yaw, pitch]} = next_short(data)
@@ -135,13 +137,13 @@ defmodule BrewingStand.Client.PacketReader do
     Logger.info("Teleported. Coords: #{x},#{y},#{z}. Yaw: #{yaw}. Pitch: #{pitch}")
   end
 
-  def handle_packet(0x0D, [_unused | data], _world_pid) do
+  def handle_packet(0x0D, [_unused | data]) do
     {:ok, message, []} = next_string(data)
 
     Logger.info("Got chat message\n#{message}")
   end
 
-  def handle_packet(op, pkt, _world_pid) do
+  def handle_packet(op, pkt) do
     IO.inspect(op, label: "unhandled opcode")
     IO.inspect(pkt, limit: :infinity)
     IO.puts("")
