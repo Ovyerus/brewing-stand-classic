@@ -49,8 +49,8 @@ defmodule BrewingStand do
       Packets.server_identify(socket, username)
       send_world(socket, world)
       # TODO: debug - player spawns in the world corner for some reason
-      Packets.spawn_player(socket, username, 32, 5, 32)
-      Packets.teleport_player(socket, 32, 5, 32)
+      Packets.spawn_player(socket, username, 32, 31, 32)
+      Packets.teleport_player(socket, 32, 31, 32)
 
       # TODO: set up intermittent pings with client - Do this after moving all
       # clients/sockets to an ETS table so that we can easily ping them all at

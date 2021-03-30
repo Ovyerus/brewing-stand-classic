@@ -53,27 +53,35 @@ defmodule BrewingStand.Packets do
 
   # TOOD: what do other player IDs do?
   def spawn_player(socket, username, x, y, z, yaw \\ 0, pitch \\ 0) do
-    :gen_tcp.send(socket, [
-      @spawn_player,
-      to_sbyte(-1),
-      username,
-      to_short(x),
-      to_short(y),
-      to_short(z),
-      yaw,
-      pitch
-    ])
+    :gen_tcp.send(
+      socket,
+      [
+        @spawn_player,
+        to_sbyte(-1),
+        username,
+        to_short(x),
+        to_short(y),
+        to_short(z),
+        yaw,
+        pitch
+      ]
+      |> List.flatten()
+    )
   end
 
   def teleport_player(socket, x, y, z, yaw \\ 0, pitch \\ 0) do
-    :gen_tcp.send(socket, [
-      @spawn_player,
-      to_sbyte(-1),
-      to_short(x),
-      to_short(y),
-      to_short(z),
-      yaw,
-      pitch
-    ])
+    :gen_tcp.send(
+      socket,
+      [
+        @spawn_player,
+        to_sbyte(-1),
+        to_short(x),
+        to_short(y),
+        to_short(z),
+        yaw,
+        pitch
+      ]
+      |> List.flatten()
+    )
   end
 end

@@ -89,8 +89,8 @@ defmodule BrewingStand.World do
 
   defp generate_flat(%__MODULE__{x: x, z: z, name: name} = world) do
     blocks =
-      for x <- 0..x, z <- 0..z, y <- 0..3, into: [] do
-        {{x, y, z}, if(y == 3, do: Blocks.grass(), else: Blocks.dirt())}
+      for x <- 0..x, z <- 0..z, y <- 0..31, into: [] do
+        {{x, y, z}, if(y == 31, do: Blocks.grass(), else: Blocks.dirt())}
       end
 
     generate_empty(world)
