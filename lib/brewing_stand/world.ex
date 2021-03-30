@@ -58,14 +58,22 @@ defmodule BrewingStand.World do
   @doc """
   Convert a world into a list of byte chunks to send to a client.
   """
-  def to_level_data(%__MODULE__{x: x, y: y, z: z, name: name}) do
-    # TODO: reorder into the order that Minecraft expects. Doesn't seem its a
-    # straight {0, 0, 0}, {0, 0, 1}.... order. Will need to experiment.
+  def to_level_data(%__MODULE__{x: width, y: height, z: length, name: name}) do
+    blocks =
+      :ets.match(name, :"$1")
+      # Weird block order sorting. Needed in order to properly order blocks for
+      # the Minecraft client to receive the right order. Doesn't seem to be
+      # perfect however - there's a weird partial 5th layer on the flat
+      # generation below - don't know if that's somehow a fault in my generator,
+      # or this though.
+      # Reference: https://fire.is-fi.re/4LnN37N.png
+      |> Enum.sort_by(fn [{{x, y, z}, _}] ->
+        x + width * (z + y * length)
+      end)
+      |> Enum.map(fn [{_, block_id}] -> block_id end)
 
-    <<b1, b2, b3, b4>> = <<x * y * z::32>>
-    blocks = :ets.match(name, :"$1") |> Enum.map(fn [{_, block_id}] -> block_id end)
-
-    # 4 byte header indicating world size, followed by array of block ids
+    <<b1, b2, b3, b4>> = <<width * height * length::32>>
+    # 4 byte header indicating world size, followed by list of block ids
     data = [b1, b2, b3, b4 | blocks] |> :zlib.gzip() |> :binary.bin_to_list()
     chunks = data |> Enum.chunk_every(1024)
 
