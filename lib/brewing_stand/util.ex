@@ -1,6 +1,7 @@
 defmodule BrewingStand.Util do
   @type packet :: list(byte())
   @type short :: -32768..32767
+  @type sbyte :: -128..127
 
   @type length_error :: {:error, :too_short}
 
@@ -58,7 +59,7 @@ defmodule BrewingStand.Util do
   def pad_list(list, size, el), do: :string.pad(list, size, :trailing, el) |> List.flatten()
 
   @spec to_short(short()) :: list(byte())
-  def to_short(int) when is_integer(int) and int > -32768 and int <= 32767 do
+  def to_short(int) when is_integer(int) and int >= -32768 and int <= 32767 do
     <<b1, b2>> = <<int::size(16)-signed>>
     [b1, b2]
   end
@@ -67,5 +68,17 @@ defmodule BrewingStand.Util do
   def from_short([first, second]) do
     <<short::size(16)-signed>> = <<first, second>>
     short
+  end
+
+  @spec to_sbyte(sbyte) :: byte()
+  def to_sbyte(int) when is_integer(int) and int >= -128 and int <= 127 do
+    <<sbyte>> = <<int::size(8)-signed>>
+    sbyte
+  end
+
+  @spec from_sbyte(byte()) :: sbyte()
+  def from_sbyte(sbyte) do
+    <<int::size(8)-signed>> = <<sbyte>>
+    int
   end
 end

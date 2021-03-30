@@ -81,8 +81,7 @@ defmodule BrewingStand.Client.PacketReader do
         {:ok, name, data} = next_string(data)
         {:ok, motd, [op]} = next_string(data)
 
-        Logger.info("Connected to #{name}")
-        Logger.info(motd)
+        Logger.info("Connected to #{name}\n#{motd}")
         Logger.debug(if op == 0x64, do: "I'm OP!", else: "I'm not OP")
 
       unk ->
@@ -98,9 +97,7 @@ defmodule BrewingStand.Client.PacketReader do
     {:ok, chunk_data, data} = next_byte_array(data)
     [percentage] = data
 
-    IO.inspect(Enum.at(chunk_data, 0))
     Level.add(chunk_data)
-
     Logger.debug("Received level chunk, size: #{chunk_len}, percentage: #{percentage}%")
   end
 

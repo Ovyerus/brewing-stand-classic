@@ -33,12 +33,12 @@ defmodule BrewingStand.Packets do
     :gen_tcp.send(socket, [@level_initialize])
   end
 
-  def level_chunk(socket, percent) do
-    Logger.debug("Sending level chunk, #{percent}% complete")
+  def level_chunk(socket, chunk, percentage) do
+    Logger.debug("Sending level chunk, #{percentage}% complete")
 
     :gen_tcp.send(
       socket,
-      [@level_chunk, 0, pad_byte_array([]), percent] |> List.flatten() |> IO.inspect()
+      [@level_chunk, to_short(length(chunk)), pad_byte_array(chunk), percentage] |> List.flatten()
     )
   end
 
@@ -51,7 +51,29 @@ defmodule BrewingStand.Packets do
     )
   end
 
-  def spawn_player(socket, username) do
-    :gen_tcp.send(socket, [@spawn_player, 0, username, 0, 0, 0, 0, 0])
+  # TOOD: what do other player IDs do?
+  def spawn_player(socket, username, x, y, z, yaw \\ 0, pitch \\ 0) do
+    :gen_tcp.send(socket, [
+      @spawn_player,
+      to_sbyte(-1),
+      username,
+      to_short(x),
+      to_short(y),
+      to_short(z),
+      yaw,
+      pitch
+    ])
+  end
+
+  def teleport_player(socket, x, y, z, yaw \\ 0, pitch \\ 0) do
+    :gen_tcp.send(socket, [
+      @spawn_player,
+      to_sbyte(-1),
+      to_short(x),
+      to_short(y),
+      to_short(z),
+      yaw,
+      pitch
+    ])
   end
 end

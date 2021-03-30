@@ -1,6 +1,6 @@
 defmodule BrewingStand do
   require Logger
-  alias BrewingStand.{Packets, Util}
+  alias BrewingStand.{Packets, Util, World}
 
   @identify 0x00
   @protocol 0x07
@@ -8,28 +8,34 @@ defmodule BrewingStand do
   def accept(port) do
     {:ok, socket} = :gen_tcp.listen(port, [:list, packet: :raw, active: false, reuseaddr: true])
 
+    # TODO: store worlds in ETS alongside clients? - also means moving world dimensions to the same table probably.
+    world = World.new(256, 64, 256, :world, :flat)
+
     Logger.info("Accepting connections on port #{port}")
-    loop(socket)
+    loop(socket, world)
   end
 
-  def loop(socket) do
+  def loop(socket, world) do
     {:ok, client} = :gen_tcp.accept(socket)
-    {:ok, pid} = Task.Supervisor.start_child(BrewingStand.TaskSupervisor, fn -> serve(client) end)
+
+    {:ok, pid} =
+      Task.Supervisor.start_child(BrewingStand.TaskSupervisor, fn -> serve(client, world) end)
+
     :ok = :gen_tcp.controlling_process(client, pid)
 
-    loop(socket)
+    loop(socket, world)
   end
 
-  def serve(socket) do
+  def serve(socket, world) do
     # TODO: store clients in ETS(?) to send global events when needed
     case :gen_tcp.recv(socket, 0) do
-      {:ok, data} -> parse_packet(socket, data)
+      {:ok, data} -> parse_packet(socket, data, world)
       {:error, :closed} -> exit(:shutdown)
       e -> Logger.error(inspect(e))
     end
   end
 
-  def parse_packet(socket, [@identify | packet]) do
+  def parse_packet(socket, [@identify | packet], world) do
     Logger.debug("Got IDENTIFY packet")
 
     with [@protocol | data] <- packet,
@@ -37,33 +43,38 @@ defmodule BrewingStand do
          {:ok, key, data} <- Util.next_string(data),
          [_unused] <- data do
       IO.inspect(username)
-      # TODO: key validation
+      # TODO: key validation?
       IO.inspect(key)
 
       Packets.server_identify(socket, username)
-      send_level(socket)
-      Packets.spawn_player(socket, username)
+      send_world(socket, world)
+      # TODO: debug - player spawns in the world corner for some reason
+      Packets.spawn_player(socket, username, 32, 5, 32)
+      Packets.teleport_player(socket, 32, 5, 32)
+
+      # TODO: set up intermittent pings with client - Do this after moving all
+      # clients/sockets to an ETS table so that we can easily ping them all at
+      # once.
     else
       [version | _] -> gtfo(socket, "Unknown protocol version #{version}. Expected #{@protocol}.")
-      _ -> gtfo(socket, "Bad packet.")
+      _ -> gtfo(socket, "Bad identify packet.")
     end
   end
 
-  def parse_packet(_socket, packet), do: IO.inspect(packet)
+  def parse_packet(_socket, packet, _world), do: IO.inspect(packet)
 
-  def send_level(socket) do
-    # not working, need to figure out level format
+  def send_world(socket, world) do
+    chunks = World.to_level_data(world)
+    chunks_len = length(chunks)
+
     Packets.level_init(socket)
-    Packets.level_chunk(socket, 0)
-    Process.sleep(1000)
-    Packets.level_chunk(socket, 25)
-    Process.sleep(1000)
-    Packets.level_chunk(socket, 50)
-    Process.sleep(1000)
-    Packets.level_chunk(socket, 75)
-    Process.sleep(1000)
-    Packets.level_chunk(socket, 100)
-    Packets.level_finalize(socket, 16, 16, 16)
+
+    for {chunk, idx} <- Enum.with_index(chunks, 1) do
+      percentage = (idx / chunks_len * 100) |> trunc()
+      Packets.level_chunk(socket, chunk, percentage)
+    end
+
+    Packets.level_finalize(socket, world.x, world.y, world.z)
   end
 
   defp gtfo(socket, reason) do
