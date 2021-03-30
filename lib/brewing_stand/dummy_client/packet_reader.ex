@@ -1,7 +1,7 @@
-defmodule BrewingStand.Client.PacketReader do
+defmodule BrewingStand.DummyClient.PacketReader do
   require Logger
 
-  alias BrewingStand.Client.Level
+  alias BrewingStand.DummyClient.Level
   import BrewingStand.Util
 
   @op_codes %{

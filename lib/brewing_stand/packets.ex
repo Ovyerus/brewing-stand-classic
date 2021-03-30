@@ -17,10 +17,8 @@ defmodule BrewingStand.Packets do
   @server_name pad_string('Minecraft Server')
   @server_motd pad_string('Running BrewingStand 0.0.1')
 
-  def server_identify(socket, username) do
-    Logger.debug("Sending IDENTIFY to #{username}")
+  def server_identify(socket) do
     # TODO: get user type based on username.
-
     :gen_tcp.send(
       socket,
       [@identify, @protocol, @server_name, @server_motd, @not_op]

@@ -1,4 +1,4 @@
-defmodule BrewingStand.Client.Level do
+defmodule BrewingStand.DummyClient.Level do
   @table :level
 
   def init() do

@@ -1,7 +1,7 @@
-defmodule BrewingStand.Client do
+defmodule BrewingStand.DummyClient do
   require Logger
 
-  alias BrewingStand.Client.{Level, PacketReader}
+  alias BrewingStand.DummyClient.{Level, PacketReader}
   import BrewingStand.Util
 
   def start do

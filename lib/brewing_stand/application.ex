@@ -8,8 +8,8 @@ defmodule BrewingStand.Application do
     port = String.to_integer(System.get_env("PORT") || "25565")
 
     children = [
-      {Task.Supervisor, name: BrewingStand.TaskSupervisor},
-      Supervisor.child_spec({Task, fn -> BrewingStand.accept(port) end}, restart: :permanent)
+      {Task.Supervisor, name: BrewingStand.Tasks},
+      Supervisor.child_spec({Task, fn -> BrewingStand.start(port) end}, restart: :permanent)
     ]
 
     opts = [strategy: :one_for_one, name: BrewingStand.Supervisor]
