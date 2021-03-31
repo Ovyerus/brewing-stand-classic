@@ -1,9 +1,6 @@
 defmodule BrewingStand do
   require Logger
-  alias BrewingStand.{Packets, PacketReader, Util, World}
-
-  @identify 0x00
-  @protocol 0x07
+  alias BrewingStand.{PacketReader, World}
 
   def start(port) do
     case :gen_tcp.listen(port, [:list, packet: :raw, active: false, reuseaddr: true]) do

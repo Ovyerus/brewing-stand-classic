@@ -66,11 +66,9 @@ defmodule BrewingStand.World do
       # perfect however - there's a weird partial 5th layer on the flat
       # generation below - don't know if that's somehow a fault in my generator,
       # or this though.
-      # Reference: https://fire.is-fi.re/4LnN37N.png
-      |> Enum.sort_by(fn [{{x, y, z}, _}] ->
-        x + width * (z + y * length)
-      end)
-      |> Enum.map(fn [{_, block_id}] -> block_id end)
+      |> Enum.map(fn [{{x, y, z}, b_id}] -> {x + width * (z + y * length), b_id} end)
+      |> Enum.sort()
+      |> Enum.map(fn {_, b_id} -> b_id end)
 
     <<b1, b2, b3, b4>> = <<width * height * length::32>>
     # 4 byte header indicating world size, followed by list of block ids

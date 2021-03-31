@@ -7,7 +7,8 @@ defmodule BrewingStand.MixProject do
       version: "0.1.0",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      aliases: aliases()
     ]
   end
 
@@ -22,9 +23,14 @@ defmodule BrewingStand.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:typed_struct, "~> 0.2.1"}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+      {:typed_struct, "~> 0.2.1"},
+      {:benchee, "~> 1.0", only: :dev}
+    ]
+  end
+
+  def aliases do
+    [
+      "bench.block_ordering": ["run --no-start priv/bench/block_ordering.exs"]
     ]
   end
 end

@@ -1,7 +1,6 @@
 defmodule BrewingStand.Packets do
   require Logger
 
-  # alias BrewingStand.Util
   import BrewingStand.Util
 
   @identify 0x00
@@ -57,9 +56,7 @@ defmodule BrewingStand.Packets do
         @spawn_player,
         to_sbyte(-1),
         username,
-        to_short(x),
-        to_short(y),
-        to_short(z),
+        coords_to_player_position(x, y, z),
         yaw,
         pitch
       ]
@@ -73,9 +70,7 @@ defmodule BrewingStand.Packets do
       [
         @spawn_player,
         to_sbyte(-1),
-        to_short(x),
-        to_short(y),
-        to_short(z),
+        coords_to_player_position(x, y, z),
         yaw,
         pitch
       ]

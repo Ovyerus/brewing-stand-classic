@@ -108,7 +108,6 @@ defmodule BrewingStand.DummyClient.PacketReader do
 
     Logger.debug("Level finalized, with world dimensions of #{x},#{y},#{z}")
     world = Level.get_world()
-    File.write!("./world.lvl", world)
 
     IO.inspect(world)
   end
