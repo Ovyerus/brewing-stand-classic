@@ -35,6 +35,10 @@ defmodule BrewingStand.DummyClient.PacketReader do
     0x0E => 64,
     # Update user type (op)
     0x0F => 1
+
+    # Custom extensions
+    # 0x10 => 64 + 2,
+    # 0x11 => 64 + 4
   }
 
   def read(socket) do
@@ -85,7 +89,7 @@ defmodule BrewingStand.DummyClient.PacketReader do
         Logger.debug(if op == 0x64, do: "I'm OP!", else: "I'm not OP")
 
       unk ->
-        Logger.debug("Client tried connecting with unknown protocol #{unk}")
+        Logger.debug("Server gave unknown protocol #{unk}")
     end
   end
 
@@ -94,7 +98,7 @@ defmodule BrewingStand.DummyClient.PacketReader do
 
   def handle_packet(0x03, data) do
     {:ok, chunk_len, data} = next_short(data)
-    {:ok, chunk_data, data} = next_byte_array(data)
+    {:ok, chunk_data, data} = next_byte_array(data, chunk_len)
     [percentage] = data
 
     Level.add(chunk_data)
@@ -107,12 +111,11 @@ defmodule BrewingStand.DummyClient.PacketReader do
     {:ok, z, _} = next_short(data)
 
     Logger.debug("Level finalized, with world dimensions of #{x},#{y},#{z}")
-    world = Level.get_world()
-
-    IO.inspect(world)
+    _world = Level.get_world()
   end
 
   def handle_packet(0x07, [player_id | data]) do
+    IO.inspect(data)
     {:ok, username, data} = next_string(data)
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
@@ -126,6 +129,7 @@ defmodule BrewingStand.DummyClient.PacketReader do
   end
 
   def handle_packet(0x08, [_player_id | data]) do
+    IO.inspect(data)
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
     {:ok, z, [yaw, pitch]} = next_short(data)
@@ -138,6 +142,20 @@ defmodule BrewingStand.DummyClient.PacketReader do
 
     Logger.info("Got chat message\n#{message}")
   end
+
+  # def handle_packet(0x10, data) do
+  #   {:ok, app_name, data} = next_string(data)
+  #   {:ok, ext_count, []} = next_short(data)
+
+  #   Logger.debug("Server tried sending CPE extinfo packet, #{app_name} #{ext_count}")
+  # end
+
+  # def handle_packet(0x11, data) do
+  #   {:ok, ext_name, [b1, b2, b3, b4]} = next_string(data)
+  #   <<ver::size(32)>> = <<b1, b2, b3, b4>>
+
+  #   Logger.debug("Server is really trying to negotiate CPE with us. #{ext_name} ver#{ver}")
+  # end
 
   def handle_packet(op, pkt) do
     IO.inspect(op, label: "unhandled opcode")

@@ -34,11 +34,12 @@ defmodule BrewingStand.Util do
     end
   end
 
-  def next_byte_array(data) when is_list(data) do
+  def next_byte_array(data, chunk_size \\ 1024) when is_list(data) and chunk_size <= 1024 do
     if length(data) >= 1024 do
       {bytes, rest} = Enum.split(data, 1024)
+      bytes = Enum.take(bytes, chunk_size)
       # Remove any padding the chunk may have
-      bytes = :string.trim(bytes, :trailing, [0])
+      # bytes = :string.trim(bytes, :trailing, [0])
 
       {:ok, bytes, rest}
     else
@@ -81,4 +82,18 @@ defmodule BrewingStand.Util do
     <<int::size(8)-signed>> = <<sbyte>>
     int
   end
+
+  @spec coords_to_player_position(short(), short(), short()) :: list(byte())
+  def coords_to_player_position(x, y, z),
+    # TODO
+    do:
+      [
+        x |> point_to_player_coord() |> to_short(),
+        y |> point_to_player_coord() |> Kernel.+(51) |> to_short(),
+        z |> point_to_player_coord() |> to_short()
+      ]
+      |> List.flatten()
+      |> IO.inspect()
+
+  def point_to_player_coord(int), do: int * 32
 end

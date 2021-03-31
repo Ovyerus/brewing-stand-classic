@@ -19,7 +19,7 @@ defmodule BrewingStand.DummyClient.Level do
     case :ets.lookup(@table, :completed) do
       [] ->
         [{:chunks, chunks}] = :ets.lookup(@table, :chunks)
-        decompressed = :zlib.unzip(chunks)
+        decompressed = :zlib.gunzip(chunks)
         :ets.insert(@table, {:completed, decompressed})
         decompressed
 
