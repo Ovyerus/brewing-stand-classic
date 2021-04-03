@@ -83,17 +83,17 @@ defmodule BrewingStand.Util do
     int
   end
 
-  @spec coords_to_player_position(short(), short(), short()) :: list(byte())
-  def coords_to_player_position(x, y, z),
-    # TODO
-    do:
-      [
-        x |> point_to_player_coord() |> to_short(),
-        y |> point_to_player_coord() |> Kernel.+(51) |> to_short(),
-        z |> point_to_player_coord() |> to_short()
-      ]
-      |> List.flatten()
-      |> IO.inspect()
+  @spec to_fp_short(float() | integer()) :: list(byte())
+  def to_fp_short(num) do
+    # MC fixed point numbers have 5 points, multiplying by 32 achieves that, and
+    # then truncate any other point.
+    num = (num * 32) |> trunc()
+    to_short(num)
+  end
 
-  def point_to_player_coord(int), do: int * 32
+  @spec from_fp_short(list(byte())) :: float()
+  def from_fp_short([_, _] = bytes) do
+    short = from_short(bytes)
+    short / 32
+  end
 end

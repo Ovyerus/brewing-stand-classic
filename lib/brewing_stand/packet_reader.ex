@@ -3,7 +3,7 @@ defmodule BrewingStand.PacketReader do
 
   import BrewingStand.Packets
   import BrewingStand.Util
-  alias BrewingStand.World
+  alias BrewingStand.{Player, World}
 
   @dialyzer {:no_match, handle_packet: 4}
 
@@ -83,22 +83,37 @@ defmodule BrewingStand.PacketReader do
   end
 
   defp handle_packet(0x00, packet, world, socket) do
+    # TODO: yell at client if they try send additional identifys
     with [@protocol | packet] <- packet,
          {:ok, username, packet} <- next_string(packet),
          {:ok, _key, packet} <- next_string(packet),
          [_unused] <- packet do
-      Logger.info("#{username} has joined the server!")
-
       server_identify(socket)
       send_world(socket, world)
+
+      Logger.info("#{username} has joined the server!")
+      player = Player.new(socket, self(), username)
+      {x, y, z} = {128.5, 64.5, 128.5}
+
+      broadcast(spawn_player(player.id, player.username, x, y, z))
+      broadcast(teleport_player(player.id, x, y, z))
+
       # TODO: debug - player spawns in the world corner for some reason
-      spawn_player(socket, username, 32, 32, 32)
-      teleport_player(socket, 32, 32, 32)
+      :gen_tcp.send(socket, spawn_player(-1, username, x, y, z))
+      :gen_tcp.send(socket, teleport_player(-1, x, y, z))
     else
       [version] -> kill(socket, "Unknown protocol version #{version}.")
-      _ -> kill("Bad packet.")
+      _ -> kill(socket, "Bad packet.")
     end
   end
+
+  # defp handle_packet(0x0D, [_unused | packet], _world, socket) do
+  #   {:ok, message, []} = next_string(packet)
+  #   player = Player.get(socket)
+
+  #   broadcast(message(player.id, message), player.id)
+  #   :gen_tcp.send(player, message(-1, message))
+  # end
 
   defp handle_packet(op, packet, _world, _socket) do
     IO.inspect(op)
@@ -109,14 +124,14 @@ defmodule BrewingStand.PacketReader do
     chunks = World.to_level_data(world)
     chunks_len = length(chunks)
 
-    level_init(socket)
+    :gen_tcp.send(socket, level_initialize())
 
     for {chunk, idx} <- Enum.with_index(chunks, 1) do
       percentage = (idx / chunks_len * 100) |> trunc()
-      level_chunk(socket, chunk, percentage)
+      :gen_tcp.send(socket, level_chunk(chunk, percentage))
     end
 
-    level_finalize(socket, world.x, world.y, world.z)
+    :gen_tcp.send(socket, level_finalize(world.x, world.y, world.z))
   end
 
   defp kill(socket, reason \\ nil) do

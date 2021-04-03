@@ -9,7 +9,8 @@ defmodule BrewingStand.Application do
 
     children = [
       {Task.Supervisor, name: BrewingStand.Tasks},
-      Supervisor.child_spec({Task, fn -> BrewingStand.start(port) end}, restart: :permanent)
+      Supervisor.child_spec({Task, fn -> BrewingStand.start(port) end}, restart: :permanent),
+      BrewingStand.Scheduled.Ping
     ]
 
     opts = [strategy: :one_for_one, name: BrewingStand.Supervisor]

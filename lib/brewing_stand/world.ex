@@ -59,6 +59,9 @@ defmodule BrewingStand.World do
   Convert a world into a list of byte chunks to send to a client.
   """
   def to_level_data(%__MODULE__{x: width, y: height, z: length, name: name}) do
+    # TODO: possible optimisation? Don't generate air blocks (treat nil cell as
+    # `0`) - might make this a bit more managable in some cases. also probably
+    # precompute keys in ETS as the sort order
     blocks =
       :ets.match(name, :"$1")
       # Weird block order sorting. Needed in order to properly order blocks for

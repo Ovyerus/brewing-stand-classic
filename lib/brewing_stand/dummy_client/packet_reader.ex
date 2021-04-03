@@ -115,7 +115,7 @@ defmodule BrewingStand.DummyClient.PacketReader do
   end
 
   def handle_packet(0x07, [player_id | data]) do
-    IO.inspect(data)
+    IO.inspect([player_id | data])
     {:ok, username, data} = next_string(data)
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
@@ -128,13 +128,13 @@ defmodule BrewingStand.DummyClient.PacketReader do
     """)
   end
 
-  def handle_packet(0x08, [_player_id | data]) do
-    IO.inspect(data)
+  def handle_packet(0x08, [player_id | data]) do
+    IO.inspect([player_id | data])
     {:ok, x, data} = next_short(data)
     {:ok, y, data} = next_short(data)
     {:ok, z, [yaw, pitch]} = next_short(data)
 
-    Logger.info("Teleported. Coords: #{x},#{y},#{z}. Yaw: #{yaw}. Pitch: #{pitch}")
+    Logger.info("Teleported #{player_id}. Coords: #{x},#{y},#{z}. Yaw: #{yaw}. Pitch: #{pitch}")
   end
 
   def handle_packet(0x0D, [_unused | data]) do

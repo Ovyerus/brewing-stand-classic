@@ -2,79 +2,99 @@ defmodule BrewingStand.Packets do
   require Logger
 
   import BrewingStand.Util
+  alias BrewingStand.Player
+
+  @type sbyte :: -127..127
+  @type short :: -32767..32767
+  @type packet :: list(byte())
 
   @identify 0x00
+  @ping 0x01
   @level_initialize 0x02
   @level_chunk 0x03
   @level_finalize 0x04
   @spawn_player 0x07
+  @despawn_player 0x0C
+  @message 0x0D
 
   @protocol 0x07
-  @not_op 0x00
-  @op 0x64
 
   @server_name pad_string('Minecraft Server')
   @server_motd pad_string('Running BrewingStand 0.0.1')
 
-  def server_identify(socket) do
-    # TODO: get user type based on username.
-    :gen_tcp.send(
-      socket,
-      [@identify, @protocol, @server_name, @server_motd, @not_op]
+  @spec broadcast(packet(), sbyte() | nil) :: :ok
+  def broadcast(packet, exclude \\ nil) do
+    players =
+      case exclude do
+        nil -> Player.all()
+        id -> Player.all_but(id)
+      end
+
+    for player <- players do
+      :gen_tcp.send(player.socket, packet)
+    end
+
+    :ok
+  end
+
+  def server_identify(op \\ 0x00),
+    do:
+      [@identify, @protocol, @server_name, @server_motd, op]
       |> List.flatten()
-    )
-  end
 
-  def level_init(socket) do
-    Logger.debug("Initializing world")
-    :gen_tcp.send(socket, [@level_initialize])
-  end
+  def ping, do: [@ping]
+  def level_initialize, do: [@level_initialize]
 
-  def level_chunk(socket, chunk, percentage) do
-    Logger.debug("Sending level chunk, #{percentage}% complete")
-
-    :gen_tcp.send(
-      socket,
+  @spec level_chunk(list(byte()), byte()) :: packet()
+  def level_chunk(chunk, percentage),
+    do:
       [@level_chunk, to_short(length(chunk)), pad_byte_array(chunk), percentage] |> List.flatten()
-    )
-  end
 
-  def level_finalize(socket, x, y, z) do
-    Logger.debug("Finalizing world")
+  @spec level_finalize(short(), short(), short()) :: packet()
+  def level_finalize(x, y, z),
+    do: [@level_finalize, to_short(x), to_short(y), to_short(z)] |> List.flatten()
 
-    :gen_tcp.send(
-      socket,
-      [@level_finalize, to_short(x), to_short(y), to_short(z)] |> List.flatten()
-    )
-  end
+  # def level_chunk(socket, chunk, percentage) do
+  #   Logger.debug("Sending level chunk, #{percentage}% complete")
 
-  # TOOD: what do other player IDs do?
-  def spawn_player(socket, username, x, y, z, yaw \\ 0, pitch \\ 0) do
-    :gen_tcp.send(
-      socket,
+  #   :gen_tcp.send(
+  #     socket,
+  #     [@level_chunk, to_short(length(chunk)), pad_byte_array(chunk), percentage] |> List.flatten()
+  #   )
+  # end
+
+  @spec spawn_player(sbyte(), String.t(), short(), short(), short(), byte(), byte()) :: packet()
+  def spawn_player(id, username, x, y, z, yaw \\ 0, pitch \\ 0),
+    do:
       [
         @spawn_player,
-        to_sbyte(-1),
+        to_sbyte(id),
         username,
-        coords_to_player_position(x, y, z),
+        to_fp_short(x),
+        to_fp_short(y),
+        to_fp_short(z),
         yaw,
         pitch
       ]
       |> List.flatten()
-    )
-  end
 
-  def teleport_player(socket, x, y, z, yaw \\ 0, pitch \\ 0) do
-    :gen_tcp.send(
-      socket,
+  @spec teleport_player(sbyte(), short(), short(), short(), byte(), byte()) :: packet()
+  def teleport_player(id, x, y, z, yaw \\ 0, pitch \\ 0),
+    do:
       [
         @spawn_player,
-        to_sbyte(-1),
-        coords_to_player_position(x, y, z),
+        to_sbyte(id),
+        to_fp_short(x),
+        to_fp_short(y),
+        to_fp_short(z),
         yaw,
         pitch
       ]
       |> List.flatten()
-    )
-  end
+
+  @spec despawn_player(sbyte()) :: packet()
+  def despawn_player(id), do: [@despawn_player, to_sbyte(id)]
+
+  # @spec message(sbyte(), String.t()) :: packet()
+  # def message(id, message), do: [@message, to_sbyte(id), pad_string(message)] |> List.flatten()
 end

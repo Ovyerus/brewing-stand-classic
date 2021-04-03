@@ -8,8 +8,9 @@ defmodule BrewingStand do
         # TODO: store worlds in ETS alongside clients? - also means moving world
         # dimensions to the same table probably. also track of current world -
         # (per client?)
-        world = World.new(256, 64, 256, :world, :flat)
-        :ets.new(:clients, [:set, :public, :named_table])
+        :ets.new(:players, [:set, :public, :named_table])
+        world = World.new(256, 64, 256, :woworld, :flat)
+
         Logger.info("Accepting connections on port #{port}")
         accept(socket, world)
 
