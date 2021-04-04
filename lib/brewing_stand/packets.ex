@@ -51,15 +51,6 @@ defmodule BrewingStand.Packets do
   def level_finalize(x, y, z),
     do: <<@level_finalize>> <> to_short(x) <> to_short(y) <> to_short(z)
 
-  # def level_chunk(socket, chunk, percentage) do
-  #   Logger.debug("Sending level chunk, #{percentage}% complete")
-
-  #   :gen_tcp.send(
-  #     socket,
-  #     [@level_chunk, to_short(length(chunk)), pad_byte_array(chunk), percentage] |> List.flatten()
-  #   )
-  # end
-
   @spec spawn_player(sbyte(), String.t(), float(), float(), float(), byte(), byte()) :: binary()
   def spawn_player(id, username, x, y, z, yaw \\ 0, pitch \\ 0),
     do:
@@ -88,6 +79,6 @@ defmodule BrewingStand.Packets do
   @spec despawn_player(sbyte()) :: binary()
   def despawn_player(id), do: <<@despawn_player, to_sbyte(id)>>
 
-  # @spec message(sbyte(), String.t()) :: binary()
-  # def message(id, message), do: [@message, to_sbyte(id), pad_string(message)] |> List.flatten()
+  @spec message(sbyte(), String.t()) :: binary()
+  def message(id, message), do: <<@message, to_sbyte(id), pad_string(message)::binary>>
 end

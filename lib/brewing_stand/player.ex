@@ -43,7 +43,7 @@ defmodule BrewingStand.Player do
     # fn {_, %{id: p_id}} = x when p_id != id -> x end
     do:
       :ets.select(:players, [{{:_, %{id: :"$1"}}, [{:"/=", :"$1", id}], [:"$_"]}])
-      |> Stream.map(fn [{_, p}] -> p end)
+      |> Stream.map(fn {_, p} -> p end)
 
   def get(socket) do
     [{_, player}] = :ets.lookup(:players, socket)

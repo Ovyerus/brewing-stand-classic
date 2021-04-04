@@ -111,13 +111,21 @@ defmodule BrewingStand.PacketReader do
     end
   end
 
-  # defp handle_packet(0x0D, [_unused | packet], _world, socket) do
-  #   {:ok, message, []} = next_string(packet)
-  #   player = Player.get(socket)
+  defp handle_packet(0x0D, packet, _world, socket) do
+    # TODO: seems kinda flaky. First couple messages don't get sent but later
+    # ones do. Also, do I need to manually prepend user name??
+    case packet do
+      # Unusued byte because Minecraft™, used by custom protocol ext for designating longer messages.
+      <<0xFF, msg::binary-size(64)>> ->
+        player = Player.get(socket)
 
-  #   broadcast(message(player.id, message), player.id)
-  #   :gen_tcp.send(player, message(-1, message))
-  # end
+        broadcast(message(player.id, msg), player.id)
+        :gen_tcp.send(socket, message(-1, msg))
+
+      _ ->
+        kill(socket, "Bad packet.")
+    end
+  end
 
   defp handle_packet(op, packet, _world, _socket) do
     IO.inspect(op)
@@ -132,6 +140,7 @@ defmodule BrewingStand.PacketReader do
 
     for {chunk, idx} <- Enum.with_index(chunks, 1) do
       percentage = (idx / chunks_len * 100) |> trunc()
+      Logger.debug("Sending level chunk, #{percentage}% complete")
       :gen_tcp.send(socket, level_chunk(chunk, percentage))
     end
 
