@@ -6,6 +6,7 @@ defmodule BrewingStand.PacketReader do
   alias BrewingStand.{Player, World}
 
   @dialyzer {:no_match, handle_packet: 4}
+  @dialyzer {:no_return, kill: 1}
 
   @protocol 0x07
   @op_codes %{
@@ -44,14 +45,14 @@ defmodule BrewingStand.PacketReader do
   }
 
   def serve(socket, world) do
-    with {:ok, [op]} <- read(socket, 1),
+    with {:ok, <<op>>} <- read(socket, 1),
          {len, _} when len not in [0, nil] <- {@op_codes[op], op},
          {:ok, packet} <- read(socket, len) do
       handle_packet(op, packet, world, socket)
       serve(socket, world)
     else
       {0, op} ->
-        handle_packet(op, [], socket, world)
+        handle_packet(op, <<>>, world, socket)
         serve(socket, world)
 
       {nil, op} ->
@@ -82,13 +83,16 @@ defmodule BrewingStand.PacketReader do
     end
   end
 
+  @spec handle_packet(byte(), binary(), World.t(), :gen_tcp.socket()) :: any()
+  defp handle_packet(op_code, packet, world, socket)
+
   defp handle_packet(0x00, packet, world, socket) do
     # TODO: yell at client if they try send additional identifys
-    with [@protocol | packet] <- packet,
+    with <<@protocol, packet::binary>> <- packet,
          {:ok, username, packet} <- next_string(packet),
          {:ok, _key, packet} <- next_string(packet),
-         [_unused] <- packet do
-      server_identify(socket)
+         <<_unused>> <- packet do
+      :gen_tcp.send(socket, server_identify())
       send_world(socket, world)
 
       Logger.info("#{username} has joined the server!")
@@ -117,7 +121,7 @@ defmodule BrewingStand.PacketReader do
 
   defp handle_packet(op, packet, _world, _socket) do
     IO.inspect(op)
-    IO.inspect(packet, limit: :infinity)
+    IO.inspect(packet, limit: :infinity, charlist: :as_list)
   end
 
   defp send_world(socket, world) do

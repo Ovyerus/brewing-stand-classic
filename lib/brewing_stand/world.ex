@@ -5,6 +5,7 @@ defmodule BrewingStand.World do
 
   use TypedStruct
   use BrewingStand.Blocks
+  alias BrewingStand.Util
 
   @type axis :: pos_integer()
   @type world_type :: :empty | :flat
@@ -54,7 +55,7 @@ defmodule BrewingStand.World do
 
   # TODO: get_block & set_block
 
-  @spec to_level_data(t()) :: list(list(byte()))
+  @spec to_level_data(t()) :: list(binary())
   @doc """
   Convert a world into a list of byte chunks to send to a client.
   """
@@ -73,10 +74,14 @@ defmodule BrewingStand.World do
       |> Enum.sort()
       |> Enum.map(fn {_, b_id} -> b_id end)
 
-    <<b1, b2, b3, b4>> = <<width * height * length::32>>
-    # 4 byte header indicating world size, followed by list of block ids
-    data = [b1, b2, b3, b4 | blocks] |> :zlib.gzip() |> :binary.bin_to_list()
-    chunks = data |> Enum.chunk_every(1024)
+    data = for block <- blocks, into: <<>>, do: <<block>>
+    # 4 byte header indicating world size
+    header = <<width * height * length::32>>
+
+    chunks =
+      <<header::binary, data::binary>>
+      |> :zlib.gzip()
+      |> Util.chunk_binary(1024)
 
     chunks
   end

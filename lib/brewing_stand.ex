@@ -3,7 +3,7 @@ defmodule BrewingStand do
   alias BrewingStand.{PacketReader, World}
 
   def start(port) do
-    case :gen_tcp.listen(port, [:list, packet: :raw, active: false, reuseaddr: true]) do
+    case :gen_tcp.listen(port, [:binary, packet: :raw, active: false, reuseaddr: true]) do
       {:ok, socket} ->
         # TODO: store worlds in ETS alongside clients? - also means moving world
         # dimensions to the same table probably. also track of current world -

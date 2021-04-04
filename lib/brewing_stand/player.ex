@@ -4,11 +4,12 @@ defmodule BrewingStand.Player do
   """
 
   @type coord :: non_neg_integer()
+  @type id :: 0..127
 
   use TypedStruct
 
   typedstruct do
-    field(:id, 0..127, enforce: true)
+    field(:id, id(), enforce: true)
     field(:username, String.t(), default: nil)
     field(:pid, pid(), enforce: true)
     field(:socket, port(), enforce: true)

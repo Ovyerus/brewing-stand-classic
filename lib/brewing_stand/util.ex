@@ -1,20 +1,16 @@
 defmodule BrewingStand.Util do
-  @type packet :: list(byte())
+  # @type packet :: list(byte())
   @type short :: -32768..32767
   @type sbyte :: -128..127
 
   @type length_error :: {:error, :too_short}
 
-  @spec next_string(packet()) ::
-          {:ok, String.t(), packet()} | length_error()
-  @doc """
-  Get next string in packet if possible. Also returns rest of packet as second
-  item in tuple.
-  """
-  def next_string(data) when is_list(data) do
-    if length(data) >= 64 do
-      {str, rest} = Enum.split(data, 64)
-      str = str |> to_string() |> String.trim_trailing()
+  @spec next_string(binary()) ::
+          {:ok, String.t(), binary()} | length_error()
+  def next_string(data) when is_binary(data) do
+    if byte_size(data) >= 64 do
+      <<str::binary-size(64), rest::binary>> = data
+      str = str |> :unicode.characters_to_binary() |> String.trim_trailing()
 
       {:ok, str, rest}
     else
@@ -22,16 +18,19 @@ defmodule BrewingStand.Util do
     end
   end
 
-  @spec next_short(packet()) :: {:ok, short(), packet()} | length_error()
-  def next_short(data) when is_list(data) do
-    if length(data) >= 2 do
-      {short, rest} = Enum.split(data, 2)
-      int = from_short(short)
-
-      {:ok, int, rest}
+  @spec next_short(binary()) :: {:ok, short(), binary()} | length_error()
+  def next_short(data) when is_binary(data) do
+    if byte_size(data) >= 2 do
+      <<short::size(16)-signed, rest::binary>> = data
+      {:ok, short, rest}
     else
       {:error, :too_short}
     end
+  end
+
+  def next_sbyte(data) when is_binary(data) do
+    <<sbyte::size(8)-signed, rest::binary>> = data
+    {:ok, sbyte, rest}
   end
 
   def next_byte_array(data, chunk_size \\ 1024) when is_list(data) and chunk_size <= 1024 do
@@ -47,28 +46,39 @@ defmodule BrewingStand.Util do
     end
   end
 
-  # TODO: probably need to split up larger chars into individual bytes, dunno
-  @spec pad_string(charlist()) :: charlist()
-  @doc """
-  Pad a charlist to proper format for a packet.
-  """
-  def pad_string(str) when is_list(str), do: pad_list(str, 64, ' ')
+  @spec pad_string(binary()) :: binary()
+  def pad_string(str) when is_binary(str), do: pad_binary(str, 64, " ")
 
-  @spec pad_byte_array(packet()) :: packet()
-  def pad_byte_array(data) when is_list(data), do: pad_list(data, 1024, 0x00)
+  @spec pad_byte_array(binary()) :: binary()
+  def pad_byte_array(data) when is_binary(data), do: pad_binary(data, 1024, <<0>>)
 
-  def pad_list(list, size, el), do: :string.pad(list, size, :trailing, el) |> List.flatten()
+  def pad_binary(binary, size, _el)
+      when is_binary(binary) and is_integer(size) and size > 0 and byte_size(binary) >= size,
+      do: binary
 
-  @spec to_short(short()) :: list(byte())
-  def to_short(int) when is_integer(int) and int >= -32768 and int <= 32767 do
-    <<b1, b2>> = <<int::size(16)-signed>>
-    [b1, b2]
+  def pad_binary(binary, size, el)
+      when is_binary(binary) and is_integer(size) and size > 0 do
+    pad_size = size - byte_size(binary)
+    pad = :binary.copy(el, pad_size)
+
+    binary <> pad
   end
 
-  @spec from_short(list(byte())) :: short()
-  def from_short([first, second]) do
-    <<short::size(16)-signed>> = <<first, second>>
-    short
+  def chunk_binary(binary, count), do: chunk_binary(binary, count, [])
+
+  def chunk_binary(binary, count, acc) when byte_size(binary) <= count,
+    do: Enum.reverse([binary | acc])
+
+  def chunk_binary(binary, count, acc) do
+    chunk_size = count * 8
+    <<chunk::size(chunk_size), rest::binary>> = binary
+
+    chunk_binary(rest, count, [<<chunk::size(chunk_size)>> | acc])
+  end
+
+  @spec to_short(short()) :: binary()
+  def to_short(int) when is_integer(int) and int >= -32768 and int <= 32767 do
+    <<int::size(16)-signed>>
   end
 
   @spec to_sbyte(sbyte) :: byte()
@@ -77,23 +87,11 @@ defmodule BrewingStand.Util do
     sbyte
   end
 
-  @spec from_sbyte(byte()) :: sbyte()
-  def from_sbyte(sbyte) do
-    <<int::size(8)-signed>> = <<sbyte>>
-    int
-  end
-
-  @spec to_fp_short(float() | integer()) :: list(byte())
+  @spec to_fp_short(float() | integer()) :: binary()
   def to_fp_short(num) do
     # MC fixed point numbers have 5 points, multiplying by 32 achieves that, and
     # then truncate any other point.
     num = (num * 32) |> trunc()
     to_short(num)
-  end
-
-  @spec from_fp_short(list(byte())) :: float()
-  def from_fp_short([_, _] = bytes) do
-    short = from_short(bytes)
-    short / 32
   end
 end

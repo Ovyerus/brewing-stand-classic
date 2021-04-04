@@ -6,30 +6,34 @@ defmodule BrewingStand.Scheduled.Ping do
 
   def run do
     for [{id, player}] <- :ets.match(:players, :"$1") do
-      case :gen_tcp.send(player.socket, ping()) do
-        :ok ->
-          :noop
-
-        {:error, :closed} ->
-          Logger.info("#{player.username || player.id} has left the server.")
-
-          Process.exit(player.pid, :shutdown)
-          :ets.delete(:players, id)
-
-          # TODO: broadcast leave message?
-          broadcast(despawn_player(player.id))
-
-        {:error, reason} ->
-          Logger.info(
-            "Failed to ping #{player.username || player.id} (#{reason}); disconnecting from server."
+      with :ok <- :gen_tcp.send(player.socket, ping()),
+           true <- Process.alive?(player.pid) do
+        :noop
+      else
+        false ->
+          Logger.warn(
+            "Process #{inspect(player.pid)} for player #{player.username} terminated, dunno why."
           )
 
-          :gen_tcp.close(player.socket)
-          Process.exit(player.pid, :shutdown)
-          :ets.delete(:players, id)
+          gtfo(id, player)
 
-          broadcast(despawn_player(player.id))
+        {:error, :closed} ->
+          Logger.info("#{player.username} has left the server.")
+          gtfo(id, player)
+
+        {:error, reason} ->
+          Logger.warn("Failed to ping #{player.username} (#{reason}); disconnecting from server.")
+          gtfo(id, player)
       end
     end
+  end
+
+  defp gtfo(id, player) do
+    :ets.delete(:players, id)
+
+    if Process.alive?(player.pid) == true, do: Process.exit(player.pid, :shutdown)
+    if :erlang.port_info(player.socket) != :undefined, do: :gen_tcp.close(player.socket)
+
+    broadcast(despawn_player(player.id), player.id)
   end
 end
